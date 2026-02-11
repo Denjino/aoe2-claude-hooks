@@ -47,7 +47,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Detect if running from repo clone or curl pipe
 FROM_REPO=false
-if [[ -f "$SCRIPT_DIR/hooks.json" && -d "$SCRIPT_DIR/scripts" ]]; then
+if [[ -f "$SCRIPT_DIR/hooks.json" && -f "$SCRIPT_DIR/play-random.sh" ]]; then
   FROM_REPO=true
 fi
 
@@ -92,18 +92,18 @@ echo -e "  ${GREEN}✓${NC} Directories created at ${DIM}$INSTALL_DIR${NC}"
 echo -e "${BLUE}[2/5]${NC} Installing scripts..."
 
 if [[ "$FROM_REPO" == "true" ]]; then
-  cp "$SCRIPT_DIR/scripts/play-random.sh" "$INSTALL_DIR/scripts/"
-  cp "$SCRIPT_DIR/scripts/play-error.sh" "$INSTALL_DIR/scripts/"
+  cp "$SCRIPT_DIR/play-random.sh" "$INSTALL_DIR/scripts/"
+  cp "$SCRIPT_DIR/play-error.sh" "$INSTALL_DIR/scripts/"
   cp "$SCRIPT_DIR/sounds.json" "$INSTALL_DIR/"
 
   if [[ ! -f "$INSTALL_DIR/config.json" ]]; then
     cp "$SCRIPT_DIR/config.json" "$INSTALL_DIR/"
   fi
 else
-  download_file "$GITHUB_RAW/scripts/play-random.sh" "$INSTALL_DIR/scripts/play-random.sh" || {
+  download_file "$GITHUB_RAW/play-random.sh" "$INSTALL_DIR/scripts/play-random.sh" || {
     echo -e "  ${RED}✗${NC} Failed to download play-random.sh"; exit 1
   }
-  download_file "$GITHUB_RAW/scripts/play-error.sh" "$INSTALL_DIR/scripts/play-error.sh" || {
+  download_file "$GITHUB_RAW/play-error.sh" "$INSTALL_DIR/scripts/play-error.sh" || {
     echo -e "  ${RED}✗${NC} Failed to download play-error.sh"; exit 1
   }
   download_file "$GITHUB_RAW/sounds.json" "$INSTALL_DIR/sounds.json" || true
