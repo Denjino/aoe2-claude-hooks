@@ -1,0 +1,10 @@
+{
+  "volume": 0.5,
+  "cooldown_seconds": 15,
+  "categories": {
+    "session-start": true,
+    "task-complete": true,
+    "permission": true,
+    "error": true
+  }
+}

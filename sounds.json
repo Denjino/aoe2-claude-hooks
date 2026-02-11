@@ -1,0 +1,19 @@
+{
+  "session-start": [
+    { "file": "villager-creation.mp3", "desc": "Villager creation — 'Prrroh'" },
+    { "file": "building-creation.mp3", "desc": "Building creation — 'Ssssho'" }
+  ],
+  "task-complete": [
+    { "file": "build-1.mp3", "desc": "Build sound 1" },
+    { "file": "build-2.mp3", "desc": "Build sound 2" },
+    { "file": "build-chinese.mp3", "desc": "Build sound — Chinese" },
+    { "file": "build-indian.mp3", "desc": "Build sound — Indian" }
+  ],
+  "permission": [
+    { "file": "wololo.mp3", "desc": "Monk 'Wololo'" },
+    { "file": "ayoyoyo.mp3", "desc": "'Ayoyoyo'" }
+  ],
+  "error": [
+    { "file": "neutral.mp3", "desc": "Neutral error sound" }
+  ]
+}
