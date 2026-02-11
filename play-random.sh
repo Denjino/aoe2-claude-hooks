@@ -94,13 +94,9 @@ CHOSEN="${SOUNDS[$RANDOM_INDEX]}"
 # Record for no-repeat
 echo "$CHOSEN" > "$LAST_FILE"
 
-# ── Convert volume (0.0–1.0) to afplay scale (0–256) ────────────────────────
-
-AFPLAY_VOL=$(python3 -c "print(int(float('$VOLUME') * 256))" 2>/dev/null || echo "128")
-
 # ── Play sound (background, non-blocking) ────────────────────────────────────
 
-afplay -v "$AFPLAY_VOL" "$CHOSEN" &>/dev/null &
+afplay -v "$VOLUME" "$CHOSEN" &>/dev/null &
 disown
 
 exit 0
