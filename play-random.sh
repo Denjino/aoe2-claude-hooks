@@ -54,7 +54,10 @@ VOLUME=$(read_config "volume" "0.5")
 
 # ── Gather sound files ───────────────────────────────────────────────────────
 
-mapfile -t SOUNDS < <(find "$CATEGORY_DIR" -type f \( -name "*.mp3" -o -name "*.m4a" -o -name "*.wav" -o -name "*.ogg" \) 2>/dev/null)
+SOUNDS=()
+while IFS= read -r -d '' file; do
+  SOUNDS+=("$file")
+done < <(find "$CATEGORY_DIR" -type f \( -name "*.mp3" -o -name "*.m4a" -o -name "*.wav" -o -name "*.ogg" \) -print0 2>/dev/null)
 
 if [[ ${#SOUNDS[@]} -eq 0 ]]; then
   exit 0
