@@ -1,5 +1,5 @@
 {
-  "volume": 0.1,
+  "volume": 0.01,
   "cooldown_seconds": 15,
   "categories": {
     "session-start": true,
