@@ -28,10 +28,17 @@ echo ""
 
 # ── Platform check ───────────────────────────────────────────────────────────
 
-if [[ "$(uname)" != "Darwin" ]]; then
-  echo -e "${RED}Error:${NC} This installer is built for macOS (uses afplay)."
-  echo -e "${DIM}Linux support: swap afplay for paplay/mpv in play-random.sh${NC}"
-  exit 1
+if [[ "$(uname)" == "Darwin" ]]; then
+  if ! command -v afplay &>/dev/null; then
+    echo -e "${YELLOW}Warning:${NC} afplay not found. Sounds may not play."
+  fi
+else
+  # Linux: check for at least one supported audio player
+  if ! command -v mpv &>/dev/null && ! command -v paplay &>/dev/null && \
+     ! command -v aplay &>/dev/null && ! command -v ffplay &>/dev/null; then
+    echo -e "${YELLOW}Warning:${NC} No supported audio player found (mpv, paplay, aplay, ffplay)."
+    echo -e "${DIM}Install one with: sudo apt install mpv${NC}"
+  fi
 fi
 
 if ! command -v python3 &>/dev/null; then

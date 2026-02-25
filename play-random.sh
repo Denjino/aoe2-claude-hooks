@@ -8,7 +8,17 @@ set -euo pipefail
 SOUNDS_DIR="$HOME/.claude/sounds/aoe2"
 CONFIG_FILE="$SOUNDS_DIR/config.json"
 LAST_PLAYED_DIR="$SOUNDS_DIR/.last-played"
+LOG_FILE="$SOUNDS_DIR/debug.log"
 CATEGORY="${1:-}"
+
+# ── Debug logging (enable by creating ~/.claude/sounds/aoe2/debug.log) ──────
+log_debug() {
+  if [[ -f "$LOG_FILE" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] play-random.sh: $*" >> "$LOG_FILE"
+  fi
+}
+
+log_debug "invoked with category='$CATEGORY'"
 
 if [[ -z "$CATEGORY" ]]; then
   exit 0
@@ -128,6 +138,7 @@ play_sound() {
   return 0
 }
 
+log_debug "playing '$CHOSEN' at volume=$VOLUME"
 play_sound "$VOLUME" "$CHOSEN"
 disown 2>/dev/null || true
 
