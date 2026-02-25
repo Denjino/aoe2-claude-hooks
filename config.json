@@ -1,6 +1,7 @@
 {
   "volume": 0.01,
   "cooldown_seconds": 15,
+  "debug": false,
   "categories": {
     "session-start": true,
     "task-complete": true,
