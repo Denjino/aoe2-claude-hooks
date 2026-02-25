@@ -9,6 +9,16 @@ SOUNDS_DIR="$HOME/.claude/sounds/aoe2"
 CONFIG_FILE="$SOUNDS_DIR/config.json"
 COOLDOWN_FILE="$SOUNDS_DIR/.last-error-time"
 PLAY_SCRIPT="$SOUNDS_DIR/scripts/play-random.sh"
+LOG_FILE="$SOUNDS_DIR/debug.log"
+
+# ── Debug logging (enable by creating ~/.claude/sounds/aoe2/debug.log) ──────
+log_debug() {
+  if [[ -f "$LOG_FILE" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] play-error.sh: $*" >> "$LOG_FILE"
+  fi
+}
+
+log_debug "invoked"
 
 # ── Read config ──────────────────────────────────────────────────────────────
 
@@ -171,4 +181,4 @@ echo "$NOW" > "$COOLDOWN_FILE"
 
 # ── Play the error sound ─────────────────────────────────────────────────────
 
-exec "$PLAY_SCRIPT" error
+bash "$PLAY_SCRIPT" error

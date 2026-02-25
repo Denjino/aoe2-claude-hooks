@@ -8,7 +8,17 @@ set -euo pipefail
 SOUNDS_DIR="$HOME/.claude/sounds/aoe2"
 CONFIG_FILE="$SOUNDS_DIR/config.json"
 LAST_PLAYED_DIR="$SOUNDS_DIR/.last-played"
+LOG_FILE="$SOUNDS_DIR/debug.log"
 CATEGORY="${1:-}"
+
+# ── Debug logging (enable by creating ~/.claude/sounds/aoe2/debug.log) ──────
+log_debug() {
+  if [[ -f "$LOG_FILE" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] play-random.sh: $*" >> "$LOG_FILE"
+  fi
+}
+
+log_debug "invoked with category='$CATEGORY'"
 
 if [[ -z "$CATEGORY" ]]; then
   exit 0
@@ -96,7 +106,40 @@ echo "$CHOSEN" > "$LAST_FILE"
 
 # ── Play sound (background, non-blocking) ────────────────────────────────────
 
-afplay -v "$VOLUME" "$CHOSEN" &>/dev/null &
-disown
+# Detect platform and available audio player
+play_sound() {
+  local vol="$1"
+  local file="$2"
+
+  if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS: use afplay
+    if command -v afplay &>/dev/null; then
+      nohup afplay -v "$vol" "$file" </dev/null &>/dev/null &
+      return 0
+    fi
+  fi
+
+  # Linux / fallback: try common audio players
+  if command -v mpv &>/dev/null; then
+    nohup mpv --no-video --volume="$(awk "BEGIN{printf \"%.0f\", $vol * 100}")" "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v paplay &>/dev/null; then
+    nohup paplay "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v aplay &>/dev/null; then
+    nohup aplay "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v ffplay &>/dev/null; then
+    nohup ffplay -nodisp -autoexit -v quiet -volume "$(awk "BEGIN{printf \"%.0f\", $vol * 100}")" "$file" </dev/null &>/dev/null &
+    return 0
+  fi
+
+  # No player found
+  return 0
+}
+
+log_debug "playing '$CHOSEN' at volume=$VOLUME"
+play_sound "$VOLUME" "$CHOSEN"
+disown 2>/dev/null || true
 
 exit 0
