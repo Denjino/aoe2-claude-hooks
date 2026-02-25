@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/sounds/aoe2/scripts/play-random.sh session-start",
+            "command": "bash ~/.claude/sounds/aoe2/scripts/play-random.sh session-start",
             "timeout": 10
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/sounds/aoe2/scripts/play-random.sh task-complete",
+            "command": "bash ~/.claude/sounds/aoe2/scripts/play-random.sh task-complete",
             "timeout": 10
           }
         ]
@@ -29,7 +29,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/sounds/aoe2/scripts/play-random.sh permission",
+            "command": "bash ~/.claude/sounds/aoe2/scripts/play-random.sh permission",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/sounds/aoe2/scripts/play-random.sh permission",
             "timeout": 10
           }
         ]
@@ -41,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/sounds/aoe2/scripts/play-error.sh",
+            "command": "bash ~/.claude/sounds/aoe2/scripts/play-error.sh",
             "timeout": 10
           }
         ]
