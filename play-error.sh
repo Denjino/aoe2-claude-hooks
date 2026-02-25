@@ -9,16 +9,29 @@ SOUNDS_DIR="$HOME/.claude/sounds/aoe2"
 CONFIG_FILE="$SOUNDS_DIR/config.json"
 COOLDOWN_FILE="$SOUNDS_DIR/.last-error-time"
 PLAY_SCRIPT="$SOUNDS_DIR/scripts/play-random.sh"
-LOG_FILE="$SOUNDS_DIR/debug.log"
+# ── Debug logging (toggle via "debug": true in config.json) ──────────────────
 
-# ── Debug logging (enable by creating ~/.claude/sounds/aoe2/debug.log) ──────
+DEBUG_LOG="$SOUNDS_DIR/debug.log"
+DEBUG="False"
+if [[ -f "$CONFIG_FILE" ]] && command -v python3 &>/dev/null; then
+  DEBUG=$(python3 -c "
+import json
+try:
+    print(str(json.load(open('$CONFIG_FILE')).get('debug', False)))
+except:
+    print('False')
+" 2>/dev/null || echo "False")
+fi
+
 log_debug() {
-  if [[ -f "$LOG_FILE" ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] play-error.sh: $*" >> "$LOG_FILE"
+  if [[ "$DEBUG" == "True" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [play-error] $*" >> "$DEBUG_LOG" 2>/dev/null || true
   fi
 }
 
-log_debug "invoked"
+log_debug "========== INVOKED: play-error.sh =========="
+log_debug "HOME=$HOME"
+log_debug "SOUNDS_DIR=$SOUNDS_DIR"
 
 # ── Read config ──────────────────────────────────────────────────────────────
 
@@ -45,7 +58,9 @@ except:
 
 # Check if error category is enabled
 ENABLED=$(read_config "categories.error" "True")
+log_debug "Error category enabled: $ENABLED"
 if [[ "$ENABLED" == "False" ]]; then
+  log_debug "EXIT: error category disabled"
   exit 0
 fi
 
@@ -57,7 +72,9 @@ NOW=$(date +%s)
 if [[ -f "$COOLDOWN_FILE" ]]; then
   LAST_TIME=$(cat "$COOLDOWN_FILE" 2>/dev/null || echo "0")
   ELAPSED=$((NOW - LAST_TIME))
+  log_debug "Cooldown check: elapsed=${ELAPSED}s, threshold=${COOLDOWN}s"
   if [[ $ELAPSED -lt $COOLDOWN ]]; then
+    log_debug "EXIT: cooldown active"
     exit 0
   fi
 fi
@@ -68,6 +85,8 @@ INPUT=""
 if [[ ! -t 0 ]]; then
   INPUT=$(cat)
 fi
+log_debug "Stdin input length: ${#INPUT}"
+log_debug "Stdin (first 500 chars): ${INPUT:0:500}"
 
 # ── Smart filter: skip benign failures ───────────────────────────────────────
 
@@ -170,7 +189,9 @@ for p in INTERESTING_PATTERNS:
 print('play')
 " 2>/dev/null || echo "play")
 
+  log_debug "Smart filter result: $SHOULD_PLAY"
   if [[ "$SHOULD_PLAY" == "skip" ]]; then
+    log_debug "EXIT: filtered out (benign)"
     exit 0
   fi
 fi
@@ -181,4 +202,5 @@ echo "$NOW" > "$COOLDOWN_FILE"
 
 # ── Play the error sound ─────────────────────────────────────────────────────
 
+log_debug "Playing error sound via: $PLAY_SCRIPT error"
 bash "$PLAY_SCRIPT" error
