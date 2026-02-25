@@ -96,7 +96,39 @@ echo "$CHOSEN" > "$LAST_FILE"
 
 # ── Play sound (background, non-blocking) ────────────────────────────────────
 
-afplay -v "$VOLUME" "$CHOSEN" &>/dev/null &
-disown
+# Detect platform and available audio player
+play_sound() {
+  local vol="$1"
+  local file="$2"
+
+  if [[ "$(uname)" == "Darwin" ]]; then
+    # macOS: use afplay
+    if command -v afplay &>/dev/null; then
+      nohup afplay -v "$vol" "$file" </dev/null &>/dev/null &
+      return 0
+    fi
+  fi
+
+  # Linux / fallback: try common audio players
+  if command -v mpv &>/dev/null; then
+    nohup mpv --no-video --volume="$(awk "BEGIN{printf \"%.0f\", $vol * 100}")" "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v paplay &>/dev/null; then
+    nohup paplay "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v aplay &>/dev/null; then
+    nohup aplay "$file" </dev/null &>/dev/null &
+    return 0
+  elif command -v ffplay &>/dev/null; then
+    nohup ffplay -nodisp -autoexit -v quiet -volume "$(awk "BEGIN{printf \"%.0f\", $vol * 100}")" "$file" </dev/null &>/dev/null &
+    return 0
+  fi
+
+  # No player found
+  return 0
+}
+
+play_sound "$VOLUME" "$CHOSEN"
+disown 2>/dev/null || true
 
 exit 0

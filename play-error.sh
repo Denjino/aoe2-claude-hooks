@@ -171,4 +171,4 @@ echo "$NOW" > "$COOLDOWN_FILE"
 
 # ── Play the error sound ─────────────────────────────────────────────────────
 
-exec "$PLAY_SCRIPT" error
+bash "$PLAY_SCRIPT" error
