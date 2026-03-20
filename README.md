@@ -6,6 +6,8 @@ Age of Empires II sound effects for [Claude Code](https://docs.anthropic.com/en/
 
 ## Install
 
+### macOS / Linux
+
 **One-liner** (no clone needed):
 
 ```bash
@@ -20,7 +22,25 @@ cd aoe2-claude-hooks
 ./install.sh
 ```
 
-The installer copies scripts to `~/.claude/sounds/aoe2/`, merges hooks into your `settings.json`, and backs up your existing config.
+### Windows
+
+**One-liner** (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/Denjino/aoe2-claude-hooks/main/install.ps1 | iex
+```
+
+**Or from the repo:**
+
+```powershell
+git clone https://github.com/Denjino/aoe2-claude-hooks.git
+cd aoe2-claude-hooks
+.\install.ps1
+```
+
+---
+
+The installer copies scripts to `~/.claude/sounds/aoe2/` (macOS/Linux) or `%USERPROFILE%\.claude\sounds\aoe2\` (Windows), merges hooks into your `settings.json`, and backs up your existing config.
 
 **Start a new Claude Code session** and you'll hear it.
 
@@ -70,7 +90,7 @@ Error sounds are smart-filtered — they only fire on real failures (build error
 
 ## Configuration
 
-Edit `~/.claude/sounds/aoe2/config.json`:
+Edit `~/.claude/sounds/aoe2/config.json` (macOS/Linux) or `%USERPROFILE%\.claude\sounds\aoe2\config.json` (Windows):
 
 ```json
 {
@@ -133,6 +153,8 @@ To enable the one-liner install with automatic sound download:
 
 If you prefer not to run the installer:
 
+### macOS / Linux
+
 1. Copy the full directory to `~/.claude/sounds/aoe2/`
 2. Make scripts executable:
    ```bash
@@ -142,7 +164,16 @@ If you prefer not to run the installer:
 3. Copy the hooks from `hooks.json` into your `~/.claude/settings.json` under the `"hooks"` key
 4. Add your sound files to the `sounds/` subdirectories
 
+### Windows
+
+1. Copy the full directory to `%USERPROFILE%\.claude\sounds\aoe2\`
+2. Copy `play-random.ps1` and `play-error.ps1` into the `scripts\` subdirectory
+3. Copy the hooks from `hooks-windows.json` into your `%USERPROFILE%\.claude\settings.json` under the `"hooks"` key (replace `%USERPROFILE%` in the command paths with your actual user profile path)
+4. Add your sound files to the `sounds\` subdirectories
+
 ## Uninstall
+
+### macOS / Linux
 
 ```bash
 ./uninstall.sh
@@ -154,21 +185,32 @@ Or if you used the one-liner:
 bash <(curl -fsSL https://raw.githubusercontent.com/Denjino/aoe2-claude-hooks/main/uninstall.sh)
 ```
 
+### Windows
+
+```powershell
+.\uninstall.ps1
+```
+
+Or if you used the one-liner:
+
+```powershell
+irm https://raw.githubusercontent.com/Denjino/aoe2-claude-hooks/main/uninstall.ps1 | iex
+```
+
 Removes sounds, scripts, and hooks from `settings.json`. Your other Claude Code settings are preserved.
 
 ## Requirements
 
-- **macOS** — uses `afplay` for audio playback
 - **Claude Code** — with hooks support
-- **python3** — for config parsing and settings merge (pre-installed on macOS)
-
-**Linux:** Swap `afplay -v $AFPLAY_VOL` for `paplay --volume=$PULSE_VOL` or `mpv --volume=$VOL --really-quiet` in `scripts/play-random.sh`.
+- **macOS** — uses `afplay` for audio playback + `python3` for config parsing (both pre-installed)
+- **Windows** — uses .NET `MediaPlayer` via PowerShell (built-in, no extra dependencies)
+- **Linux** — swap `afplay -v $AFPLAY_VOL` for `paplay --volume=$PULSE_VOL` or `mpv --volume=$VOL --really-quiet` in `scripts/play-random.sh`; requires `python3`
 
 ## How It Works
 
 1. Claude Code fires hook events at lifecycle points (session start, task stop, notifications, errors)
-2. Our hooks call `play-random.sh <category>` or `play-error.sh`
-3. The script reads `config.json`, picks a random sound (avoiding repeats), and plays it via `afplay` in the background
+2. Our hooks call `play-random.sh <category>` (macOS/Linux) or `play-random.ps1 <category>` (Windows)
+3. The script reads `config.json`, picks a random sound (avoiding repeats), and plays it in the background — via `afplay` on macOS or .NET `MediaPlayer` on Windows
 4. Error sounds go through a smart filter that checks the failure JSON for real errors vs. benign noise
 
 All sounds play asynchronously — they never block Claude Code's execution.
