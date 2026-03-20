@@ -131,31 +131,42 @@ Write-DebugLog "Launching playback for: $ChosenPath (volume=$Volume)"
 
 # Write a temporary playback script to avoid argument-quoting issues with paths
 # that contain spaces (e.g. C:\Users\John Doe\...).
-# Uses Windows Media Player COM object — handles mp3/wav/m4a/ogg synchronously
-# without needing a WPF dispatcher thread.
+# Strategy: try WMPlayer.OCX first (simpler, synchronous), fall back to WPF
+# MediaPlayer with -STA (always available, needs single-threaded apartment).
 $tempScript = Join-Path $env:TEMP "aoe2-play-$(Get-Random).ps1"
 
 try {
     @"
 try {
-    `$wmp = New-Object -ComObject WMPlayer.OCX
+    # Attempt 1: Windows Media Player COM object (synchronous, simple)
+    `$wmp = New-Object -ComObject WMPlayer.OCX -ErrorAction Stop
     `$wmp.settings.volume = [int]($Volume * 100)
     `$wmp.URL = '$($ChosenPath -replace "'", "''")'
     `$wmp.controls.play()
-    # Wait for playback to start
     Start-Sleep -Milliseconds 500
-    # Wait for playback to finish (poll state: 3=playing, 6=buffering)
     while (`$wmp.playState -eq 3 -or `$wmp.playState -eq 6 -or `$wmp.playState -eq 0) {
         Start-Sleep -Milliseconds 200
     }
     `$wmp.close()
-} catch {} finally {
-    # Clean up this temp script
+} catch {
+    # Attempt 2: WPF MediaPlayer (always available on Windows 10/11)
+    try {
+        Add-Type -AssemblyName PresentationCore
+        `$player = New-Object System.Windows.Media.MediaPlayer
+        `$player.Open([Uri]'$($ChosenPath -replace "'", "''")')
+        Start-Sleep -Milliseconds 500
+        `$player.Volume = $Volume
+        `$player.Play()
+        Start-Sleep -Seconds 5
+        `$player.Close()
+    } catch {}
+} finally {
     Remove-Item -Path '$($tempScript -replace "'", "''")' -Force -ErrorAction SilentlyContinue
 }
 "@ | Set-Content -Path $tempScript -Encoding UTF8
 
-    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$tempScript`"" -WindowStyle Hidden
+    # -STA flag ensures single-threaded apartment mode required by WPF MediaPlayer
+    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -NoProfile -STA -ExecutionPolicy Bypass -File `"$tempScript`"" -WindowStyle Hidden
     Write-DebugLog "Spawned background playback process"
 } catch {
     Write-DebugLog "Failed to launch playback: $_"

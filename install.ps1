@@ -25,14 +25,25 @@ if ($env:OS -ne "Windows_NT") {
     exit 1
 }
 
-# Verify Windows Media Player COM object is available for audio playback
+# Check available audio backends
+$hasWmp = $false
+$hasWpf = $false
 try {
     $testWmp = New-Object -ComObject WMPlayer.OCX -ErrorAction Stop
     $testWmp.close()
-    Write-Host "  ✓ Audio playback available (Windows Media Player)" -ForegroundColor Green
-} catch {
-    Write-Host "  Warning: Windows Media Player not available. Sounds may not play." -ForegroundColor Yellow
-    Write-Host "  Install via: Settings > Apps > Optional Features > Windows Media Player" -ForegroundColor DarkGray
+    $hasWmp = $true
+} catch {}
+try {
+    Add-Type -AssemblyName PresentationCore -ErrorAction Stop
+    $hasWpf = $true
+} catch {}
+
+if ($hasWmp) {
+    Write-Host "  ✓ Audio backend: Windows Media Player (primary)" -ForegroundColor Green
+} elseif ($hasWpf) {
+    Write-Host "  ✓ Audio backend: WPF MediaPlayer (fallback)" -ForegroundColor Green
+} else {
+    Write-Host "  Warning: No audio backend found. Sounds may not play." -ForegroundColor Yellow
 }
 
 # ── Paths ────────────────────────────────────────────────────────────────────
