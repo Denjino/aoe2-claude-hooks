@@ -25,12 +25,14 @@ if ($env:OS -ne "Windows_NT") {
     exit 1
 }
 
-# Verify PowerShell can load WPF for audio playback
+# Verify Windows Media Player COM object is available for audio playback
 try {
-    Add-Type -AssemblyName presentationCore -ErrorAction Stop
-    Write-Host "  ✓ Audio playback available (WPF MediaPlayer)" -ForegroundColor Green
+    $testWmp = New-Object -ComObject WMPlayer.OCX -ErrorAction Stop
+    $testWmp.close()
+    Write-Host "  ✓ Audio playback available (Windows Media Player)" -ForegroundColor Green
 } catch {
-    Write-Host "  Warning: WPF MediaPlayer not available. Sounds may not play." -ForegroundColor Yellow
+    Write-Host "  Warning: Windows Media Player not available. Sounds may not play." -ForegroundColor Yellow
+    Write-Host "  Install via: Settings > Apps > Optional Features > Windows Media Player" -ForegroundColor DarkGray
 }
 
 # ── Paths ────────────────────────────────────────────────────────────────────
