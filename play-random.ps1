@@ -80,7 +80,8 @@ Write-DebugLog "Volume: $Volume"
 
 # ── Gather sound files ───────────────────────────────────────────────────────
 
-$Sounds = @(Get-ChildItem -Path $CategoryDir -File -Recurse -Include *.mp3,*.m4a,*.wav,*.ogg 2>$null)
+# Note: -Include requires -Recurse or a wildcard in -Path to work reliably
+$Sounds = @(Get-ChildItem -Path (Join-Path $CategoryDir "*") -File -Include *.mp3,*.m4a,*.wav,*.ogg -ErrorAction SilentlyContinue)
 
 Write-DebugLog "Sound files found: $($Sounds.Count)"
 Write-DebugLog "Files: $(($Sounds | ForEach-Object { $_.FullName }) -join ', ')"
@@ -126,19 +127,40 @@ try {
 
 # ── Play sound (background, non-blocking) ────────────────────────────────────
 
-Write-DebugLog "Launching MediaPlayer for: $ChosenPath (volume=$Volume)"
+Write-DebugLog "Launching playback for: $ChosenPath (volume=$Volume)"
 
-# Launch playback in a hidden background process so it doesn't block Claude Code
-$playCommand = @"
-Add-Type -AssemblyName presentationCore
-`$player = New-Object System.Windows.Media.MediaPlayer
-`$player.Volume = $Volume
-`$player.Open([Uri]::new('$($ChosenPath -replace "'", "''")'))
-`$player.Play()
-Start-Sleep -Seconds 15
-"@
+# Write a temporary playback script to avoid argument-quoting issues with paths
+# that contain spaces (e.g. C:\Users\John Doe\...).
+# Uses Windows Media Player COM object — handles mp3/wav/m4a/ogg synchronously
+# without needing a WPF dispatcher thread.
+$tempScript = Join-Path $env:TEMP "aoe2-play-$(Get-Random).ps1"
 
-Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command $playCommand" -WindowStyle Hidden
+try {
+    @"
+try {
+    `$wmp = New-Object -ComObject WMPlayer.OCX
+    `$wmp.settings.volume = [int]($Volume * 100)
+    `$wmp.URL = '$($ChosenPath -replace "'", "''")'
+    `$wmp.controls.play()
+    # Wait for playback to start
+    Start-Sleep -Milliseconds 500
+    # Wait for playback to finish (poll state: 3=playing, 6=buffering)
+    while (`$wmp.playState -eq 3 -or `$wmp.playState -eq 6 -or `$wmp.playState -eq 0) {
+        Start-Sleep -Milliseconds 200
+    }
+    `$wmp.close()
+} catch {} finally {
+    # Clean up this temp script
+    Remove-Item -Path '$($tempScript -replace "'", "''")' -Force -ErrorAction SilentlyContinue
+}
+"@ | Set-Content -Path $tempScript -Encoding UTF8
+
+    Start-Process powershell.exe -ArgumentList "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$tempScript`"" -WindowStyle Hidden
+    Write-DebugLog "Spawned background playback process"
+} catch {
+    Write-DebugLog "Failed to launch playback: $_"
+    Remove-Item -Path $tempScript -Force -ErrorAction SilentlyContinue
+}
 
 Write-DebugLog "Script complete"
 exit 0
