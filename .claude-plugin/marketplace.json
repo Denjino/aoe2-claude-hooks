@@ -1,0 +1,14 @@
+{
+  "name": "aoe2-claude-hooks",
+  "description": "Age of Empires II flavour for Claude Code: the town mod.",
+  "owner": {
+    "name": "Denjino"
+  },
+  "plugins": [
+    {
+      "name": "aoe2-town",
+      "source": "./plugins/aoe2-town",
+      "description": "Watch Claude work as a tiny isometric Age of Empires II town: subagents are units, tasks are houses, context is population."
+    }
+  ]
+}

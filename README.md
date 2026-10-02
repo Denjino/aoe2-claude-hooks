@@ -44,6 +44,48 @@ The installer copies scripts to `~/.claude/sounds/aoe2/` (macOS/Linux) or `%USER
 
 **Start a new Claude Code session** and you'll hear it.
 
+## The Town (Claude Code mod)
+
+![The town in the Dark, Feudal, Castle and Imperial Ages](docs/aoe2-town.png)
+
+A Claude Code mod that draws your session as a tiny isometric AoE2 town in a narrow side pane (pixel art on the terminal, SVG in the desktop app):
+
+| In Claude Code | In the town |
+| --- | --- |
+| Main agent working | Smoke from the Town Center chimney, flag waving |
+| Waiting for permission | Town bell flashes, a monk at the door goes "Wololo" |
+| Tool failure | The Town Center burns for a few seconds |
+| Subagent | A unit walks the map: Villager (general-purpose, shuttles wood and gold), Scout (Explore, circles the map), Monk (Plan), Militia (anything else). When it finishes, it walks home |
+| Task / todo | A house: foundation (pending), scaffolding with a builder (in progress), finished house (done) |
+| Share of tasks done | The Age: Dark → Feudal → Castle → Imperial. Buildings change look each Age, and you never drop back an Age |
+| Context window used | Population: `Pop 120/200`. At 90% you get "You need to build more houses!" |
+
+It also keeps a one-line summary in the status line, for terminals too narrow to show the pane.
+
+### Install the mod
+
+```
+/plugin marketplace add Denjino/aoe2-claude-hooks
+/plugin install aoe2-town@aoe2-claude-hooks
+```
+
+The pane opens on its own in wide terminals (144+ columns). Run `/aoe2` to open it anywhere.
+
+### Mod sounds
+
+The mod plays sounds through the same `play-random.sh` / `play-random.ps1` scripts the installer sets up, so `config.json` volume, category toggles and no-repeat apply. Run the regular install above first so the scripts and sounds are there.
+
+| Event | Category folder | If that folder is missing |
+| --- | --- | --- |
+| Subagent starts ("unit trained") | `sounds/unit-trained/` | `session-start` (villager "Prrroh") |
+| Task completed | `sounds/research-complete/` | `task-complete` |
+| Age up | `sounds/age-up/` | `task-complete` |
+
+Set the `sounds` option in `/config` to choose what the mod plays:
+- `extras` (default): only the sounds above. The settings hooks keep handling session start, stop, permission and errors.
+- `all`: the mod plays those four as well. Use this only if you removed the settings hooks.
+- `off`: no sounds from the mod.
+
 ## What It Does
 
 Uses [Claude Code hooks](https://code.claude.com/docs/en/hooks) to trigger AoE2 sound effects on four events:
