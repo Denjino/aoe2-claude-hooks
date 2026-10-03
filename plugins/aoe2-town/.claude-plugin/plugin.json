@@ -1,0 +1,22 @@
+{
+  "name": "aoe2-town",
+  "version": "0.2.0",
+  "description": "Watch Claude work as a tiny Age of Empires II town above the prompt: subagents are units, tasks are houses, context is population.",
+  "author": {
+    "name": "Denjino"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "sounds": {
+      "type": "string",
+      "title": "Sounds",
+      "description": "extras: only the town's own sounds (units trained, tasks done, age up), beside the AoE2 settings hooks. all: every sound, for installs without the settings hooks. off: silent.",
+      "default": "extras",
+      "options": [
+        "extras",
+        "all",
+        "off"
+      ]
+    }
+  }
+}

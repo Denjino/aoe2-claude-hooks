@@ -44,6 +44,48 @@ The installer copies scripts to `~/.claude/sounds/aoe2/` (macOS/Linux) or `%USER
 
 **Start a new Claude Code session** and you'll hear it.
 
+## The Town (Claude Code mod)
+
+![The town through a session](docs/aoe2-town.png)
+
+A Claude Code mod that draws your session as a small Age of Empires II town in a short band across the top of the prompt. The desktop app shows animated vector art; the terminal shows a pixel-art strip.
+
+| In Claude Code | In the town |
+| --- | --- |
+| Session starts | A lone villager wanders an empty map of trees and grass |
+| First turn | The Town Center is built over a second and a half |
+| Main agent working | The chimney smokes and the villager hauls wood to the Town Center |
+| Waiting for permission | The town bell flashes, the smoke stops, and a monk appears to "Wololo" |
+| Tool failure | The Town Center burns for 4 seconds |
+| Subagent | A unit walks the map: Villager (general-purpose, gathers wood and gold), Scout (Explore, rides a loop around the map), Monk (Plan), Militia (anything else). When it finishes, it walks home |
+| Task / todo | A house: foundation (pending), scaffolding with a builder (in progress), finished house (done). Hover a house on desktop to see its task |
+| Share of tasks done | The Age: Dark → Feudal → Castle → Imperial. Buildings change look each Age, and you never drop back an Age |
+| Context window used | Population: `120/200`. At 90% it warns "You need to build more houses!" |
+
+Run `/aoe2` to hide or show the band.
+
+### Install the mod
+
+```
+/plugin marketplace add Denjino/aoe2-claude-hooks
+/plugin install aoe2-town@aoe2-claude-hooks
+```
+
+### Mod sounds
+
+The mod plays sounds through the same `play-random.sh` / `play-random.ps1` scripts the installer sets up, so `config.json` volume, category toggles and no-repeat apply. Run the regular install above first so the scripts and sounds are there.
+
+| Event | Category folder | If that folder is missing |
+| --- | --- | --- |
+| Subagent starts ("unit trained") | `sounds/unit-trained/` | `session-start` (villager "Prrroh") |
+| Task completed | `sounds/research-complete/` | `task-complete` |
+| Age up | `sounds/age-up/` | `task-complete` |
+
+Set the `sounds` option in `/config` to choose what the mod plays:
+- `extras` (default): only the sounds above. The settings hooks keep handling session start, stop, permission and errors.
+- `all`: the mod plays those four as well. Use this only if you removed the settings hooks.
+- `off`: no sounds from the mod.
+
 ## What It Does
 
 Uses [Claude Code hooks](https://code.claude.com/docs/en/hooks) to trigger AoE2 sound effects on four events:
@@ -198,6 +240,13 @@ irm https://raw.githubusercontent.com/Denjino/aoe2-claude-hooks/main/uninstall.p
 ```
 
 Removes sounds, scripts, and hooks from `settings.json`. Your other Claude Code settings are preserved.
+
+## Troubleshooting: no sound on Windows
+
+1. **Volume.** Older versions shipped `"volume": 0.01`, which Windows plays at 1/100. The installer keeps an existing config, so open `%USERPROFILE%\.claude\sounds\aoe2\config.json` and set `"volume": 0.5`.
+2. **Old hooks.** Open `%USERPROFILE%\.claude\settings.json`. If the aoe2 commands start with `bash ~/.claude/...`, they came from `install.sh`, which can't play sound on Windows. Re-run `install.ps1` to replace them.
+3. **Test directly:** `powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\sounds\aoe2\scripts\play-random.ps1" task-complete`. If that's silent, set `"debug": true` in `config.json` and check `debug.log` in the same folder.
+4. In Claude Code, run `/hooks` to confirm the aoe2 hooks loaded.
 
 ## Requirements
 
