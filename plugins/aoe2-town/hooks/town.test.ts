@@ -10,8 +10,8 @@ function engine(on: On) {
   on('ui.toast', async () => ({ value: undefined }))
 }
 
-const PANE = { plugin: 'aoe2-town', component: 'Pane', requestId: 'aoe2-town' } as const
-const PANE_PROPS = { title: 'AoE II', isFocused: false, bodyColumns: 40, placement: 'dock' } as never
+const BAND = { plugin: 'aoe2-town', component: 'AbovePrompt' } as const
+const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100 } as never
 
 test('subagents become units and tasks become houses, on every surface', { options: { sounds: 'off' } }, async ($, on) => {
   mock.clock(on, { now: 1_000_000 })
@@ -23,22 +23,39 @@ test('subagents become units and tasks become houses, on every surface', { optio
   await $.classic.TaskCreated({ task_id: '3', task_subject: 'Update docs' })
   await $.classic.TaskCompleted({ task_id: '1', task_subject: 'Write the parser' })
 
-  for (const surface of ['terminal', 'desktop'] as const) {
-    const ui = await $.ui.mount({ ...PANE, surface, props: PANE_PROPS })
-    expect(await ui.find({ text: /Units 1/ })).toBeDefined()
-    expect(await ui.find({ text: /Built 1\/3/ })).toBeDefined()
-    expect(await ui.find({ text: /Scout: Explore/ })).toBeDefined()
-    expect(await ui.find({ text: /Write the parser/ })).toBeDefined()
-    // a third of the tasks done: the town has reached the Feudal Age
-    expect(await ui.find({ text: /Feudal Age/ })).toBeDefined()
-    expect(await ui.find({ type: surface === 'terminal' ? 'Raster' : 'Svg' })).toBeDefined()
-    await ui.unmount()
-  }
+  const terminal = await $.ui.mount({ ...BAND, surface: 'terminal', props: BAND_PROPS })
+  expect(await terminal.find({ type: 'Raster' })).toBeDefined()
+  // a third of the tasks done: the town has reached the Feudal Age
+  expect(await terminal.find({ text: /Feudal Age.*1 unit at work.*1\/3 built/ })).toBeDefined()
+  await terminal.unmount()
+
+  const desktop = await $.ui.mount({ ...BAND, surface: 'desktop', props: BAND_PROPS })
+  const svg = String((await desktop.find({ type: 'Svg' }))?.props.source)
+  expect(svg).toContain('Feudal Age')
+  expect(svg).toContain('<title>Write the parser</title>')
+  expect(svg).toContain('<title>Explore</title>')
+  await desktop.unmount()
 
   await $.classic.SubagentStop({ agent_id: 'a1', agent_type: 'Explore', stop_hook_active: false, agent_transcript_path: '' })
-  const ui = await $.ui.mount({ ...PANE, surface: 'terminal', props: PANE_PROPS })
-  expect(await ui.find({ text: /Units 0/ })).toBeDefined()
-  await ui.unmount()
+  const after = await $.ui.mount({ ...BAND, surface: 'terminal', props: BAND_PROPS })
+  expect(await after.find({ text: /Feudal Age/ })).toBeDefined()
+  expect(await after.find({ text: /unit at work/ })).toBeUndefined()
+  await after.unmount()
+})
+
+test('the first turn raises the Town Center', { options: { sounds: 'off' } }, async ($, on) => {
+  mock.clock(on, { now: 2_000_000 })
+  engine(on)
+  on('turn.start', async (_$, e) => ({ turnId: e.turnId }))
+
+  const before = await $.ui.mount({ ...BAND, surface: 'desktop', props: BAND_PROPS })
+  expect(String((await before.find({ type: 'Svg' }))?.props.source)).not.toContain('clip-path="url(#rise)"')
+  await before.unmount()
+
+  await $.turn.start({ text: 'hello', turnId: 't1' })
+  const during = await $.ui.mount({ ...BAND, surface: 'desktop', props: BAND_PROPS })
+  expect(String((await during.find({ type: 'Svg' }))?.props.source)).toContain('clip-path="url(#rise)"')
+  await during.unmount()
 })
 
 test('a trained unit plays the villager sound through the installed script', async ($, on) => {

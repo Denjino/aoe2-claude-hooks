@@ -8,7 +8,7 @@
     {
       "name": "aoe2-town",
       "source": "./plugins/aoe2-town",
-      "description": "Watch Claude work as a tiny isometric Age of Empires II town: subagents are units, tasks are houses, context is population."
+      "description": "Watch Claude work as a tiny Age of Empires II town above the prompt: subagents are units, tasks are houses, context is population."
     }
   ]
 }

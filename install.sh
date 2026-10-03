@@ -28,6 +28,13 @@ echo ""
 
 # ── Platform check ───────────────────────────────────────────────────────────
 
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    echo -e "${RED}Error:${NC} On Windows, use install.ps1 (PowerShell) instead of install.sh."
+    exit 1
+    ;;
+esac
+
 if [[ "$(uname)" == "Darwin" ]]; then
   if ! command -v afplay &>/dev/null; then
     echo -e "${YELLOW}Warning:${NC} afplay not found. Sounds may not play."

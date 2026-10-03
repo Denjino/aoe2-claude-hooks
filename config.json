@@ -1,5 +1,5 @@
 {
-  "volume": 0.01,
+  "volume": 0.5,
   "cooldown_seconds": 15,
   "debug": false,
   "categories": {

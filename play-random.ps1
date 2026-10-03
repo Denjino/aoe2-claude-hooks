@@ -140,12 +140,18 @@ try {
 try {
     # Attempt 1: Windows Media Player COM object (synchronous, simple)
     `$wmp = New-Object -ComObject WMPlayer.OCX -ErrorAction Stop
-    `$wmp.settings.volume = [int]($Volume * 100)
+    `$wmp.settings.mute = `$false
+    `$wmp.settings.volume = [Math]::Max(1, [int]($Volume * 100))
     `$wmp.URL = '$($ChosenPath -replace "'", "''")'
     `$wmp.controls.play()
-    Start-Sleep -Milliseconds 500
-    while (`$wmp.playState -eq 3 -or `$wmp.playState -eq 6 -or `$wmp.playState -eq 0) {
-        Start-Sleep -Milliseconds 200
+    `$deadline = (Get-Date).AddSeconds(15)
+    # Wait for playback to start: 0 Undefined, 6 Buffering, 7 Waiting, 9 Transitioning, 10 Ready
+    while (@(0, 6, 7, 9, 10) -contains `$wmp.playState -and (Get-Date) -lt `$deadline) {
+        Start-Sleep -Milliseconds 100
+    }
+    # Then for it to finish: 3 Playing (6 and 9 can recur mid-clip)
+    while (@(3, 6, 9) -contains `$wmp.playState -and (Get-Date) -lt `$deadline) {
+        Start-Sleep -Milliseconds 100
     }
     `$wmp.close()
 } catch {

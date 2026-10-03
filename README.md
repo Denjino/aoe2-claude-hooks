@@ -46,21 +46,23 @@ The installer copies scripts to `~/.claude/sounds/aoe2/` (macOS/Linux) or `%USER
 
 ## The Town (Claude Code mod)
 
-![The town in the Dark, Feudal, Castle and Imperial Ages](docs/aoe2-town.png)
+![The town through a session](docs/aoe2-town.png)
 
-A Claude Code mod that draws your session as a tiny isometric AoE2 town in a narrow side pane (pixel art on the terminal, SVG in the desktop app):
+A Claude Code mod that draws your session as a small Age of Empires II town in a short band across the top of the prompt. The desktop app shows animated vector art; the terminal shows a pixel-art strip.
 
 | In Claude Code | In the town |
 | --- | --- |
-| Main agent working | Smoke from the Town Center chimney, flag waving |
-| Waiting for permission | Town bell flashes, a monk at the door goes "Wololo" |
-| Tool failure | The Town Center burns for a few seconds |
-| Subagent | A unit walks the map: Villager (general-purpose, shuttles wood and gold), Scout (Explore, circles the map), Monk (Plan), Militia (anything else). When it finishes, it walks home |
-| Task / todo | A house: foundation (pending), scaffolding with a builder (in progress), finished house (done) |
+| Session starts | A lone villager wanders an empty map of trees and grass |
+| First turn | The Town Center is built over a second and a half |
+| Main agent working | The chimney smokes and the villager hauls wood to the Town Center |
+| Waiting for permission | The town bell flashes, the smoke stops, and a monk appears to "Wololo" |
+| Tool failure | The Town Center burns for 4 seconds |
+| Subagent | A unit walks the map: Villager (general-purpose, gathers wood and gold), Scout (Explore, rides a loop around the map), Monk (Plan), Militia (anything else). When it finishes, it walks home |
+| Task / todo | A house: foundation (pending), scaffolding with a builder (in progress), finished house (done). Hover a house on desktop to see its task |
 | Share of tasks done | The Age: Dark → Feudal → Castle → Imperial. Buildings change look each Age, and you never drop back an Age |
-| Context window used | Population: `Pop 120/200`. At 90% you get "You need to build more houses!" |
+| Context window used | Population: `120/200`. At 90% it warns "You need to build more houses!" |
 
-It also keeps a one-line summary in the status line, for terminals too narrow to show the pane.
+Run `/aoe2` to hide or show the band.
 
 ### Install the mod
 
@@ -68,8 +70,6 @@ It also keeps a one-line summary in the status line, for terminals too narrow to
 /plugin marketplace add Denjino/aoe2-claude-hooks
 /plugin install aoe2-town@aoe2-claude-hooks
 ```
-
-The pane opens on its own in wide terminals (144+ columns). Run `/aoe2` to open it anywhere.
 
 ### Mod sounds
 
@@ -240,6 +240,13 @@ irm https://raw.githubusercontent.com/Denjino/aoe2-claude-hooks/main/uninstall.p
 ```
 
 Removes sounds, scripts, and hooks from `settings.json`. Your other Claude Code settings are preserved.
+
+## Troubleshooting: no sound on Windows
+
+1. **Volume.** Older versions shipped `"volume": 0.01`, which Windows plays at 1/100. The installer keeps an existing config, so open `%USERPROFILE%\.claude\sounds\aoe2\config.json` and set `"volume": 0.5`.
+2. **Old hooks.** Open `%USERPROFILE%\.claude\settings.json`. If the aoe2 commands start with `bash ~/.claude/...`, they came from `install.sh`, which can't play sound on Windows. Re-run `install.ps1` to replace them.
+3. **Test directly:** `powershell -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\.claude\sounds\aoe2\scripts\play-random.ps1" task-complete`. If that's silent, set `"debug": true` in `config.json` and check `debug.log` in the same folder.
+4. In Claude Code, run `/hooks` to confirm the aoe2 hooks loaded.
 
 ## Requirements
 

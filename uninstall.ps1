@@ -57,7 +57,8 @@ if (Test-Path $SettingsFile) {
                 $settings.PSObject.Properties.Remove('hooks')
             }
 
-            $settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
+            $json = $settings | ConvertTo-Json -Depth 10
+            [System.IO.File]::WriteAllText($SettingsFile, $json, (New-Object System.Text.UTF8Encoding $false))
         }
 
         Write-Host "  ✓ " -ForegroundColor Green -NoNewline

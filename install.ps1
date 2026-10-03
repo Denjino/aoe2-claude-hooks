@@ -4,6 +4,9 @@
 
 $ErrorActionPreference = "Stop"
 
+# GitHub needs TLS 1.2, which older Windows PowerShell does not enable by default
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
 # ── AoE2 ASCII Banner ───────────────────────────────────────────────────────
 
 Write-Host ""
@@ -148,6 +151,15 @@ if ($FromRepo) {
 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
 Write-Host "Scripts installed"
 
+# An existing config is kept, so warn when its volume is too low to hear
+$cfgPath = Join-Path $InstallDir "config.json"
+try {
+    $v = [double](Get-Content $cfgPath -Raw | ConvertFrom-Json).volume
+    if ($v -lt 0.1) {
+        Write-Host "  ⚠ volume in $cfgPath is $v, which is nearly silent on Windows. Try 0.5." -ForegroundColor Yellow
+    }
+} catch {}
+
 # ── Step 3: Install sounds ───────────────────────────────────────────────────
 
 Write-Host "[3/5]" -ForegroundColor Blue -NoNewline
@@ -238,9 +250,6 @@ if ($FromRepo) {
     Remove-Item $hooksTemp -Force -ErrorAction SilentlyContinue
 }
 
-# Resolve %USERPROFILE% in hook commands to actual path
-$resolvedProfile = $env:USERPROFILE -replace '\\', '\\'
-
 # Ensure settings directory exists
 $settingsDir = Split-Path $SettingsFile -Parent
 if (-not (Test-Path $settingsDir)) {
@@ -248,7 +257,7 @@ if (-not (Test-Path $settingsDir)) {
 }
 
 # Load existing settings
-$settings = @{}
+$settings = [PSCustomObject]@{}
 if (Test-Path $SettingsFile) {
     try {
         $settings = Get-Content $SettingsFile -Raw | ConvertFrom-Json
@@ -317,7 +326,9 @@ foreach ($eventName in $newHookEvents.PSObject.Properties.Name) {
 }
 
 # Write settings back (CRITICAL: -Depth 10 to avoid truncation)
-$settings | ConvertTo-Json -Depth 10 | Set-Content $SettingsFile -Encoding UTF8
+# Written without a byte-order mark: Windows PowerShell's -Encoding UTF8 adds one
+$json = $settings | ConvertTo-Json -Depth 10
+[System.IO.File]::WriteAllText($SettingsFile, $json, (New-Object System.Text.UTF8Encoding $false))
 
 Write-Host "  ✓ " -ForegroundColor Green -NoNewline
 Write-Host "Hooks merged into " -NoNewline

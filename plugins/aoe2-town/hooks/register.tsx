@@ -2,13 +2,11 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Town, TownTask, TaskStatus, UnitKind } from '../types'
-import { ageName, HEIGHT, ROWS, WIDTH, drawTown, isAnimated, toRasterCells, toSvg, visibleTasks } from './scene'
+import { STRIP_ROWS, drawStrip, toRasterCells } from './pixels'
+import { townSvg } from './svg'
+import { BURN_MS, HOMEWARD_MS, ageName } from './world'
 
-const PANE = 'aoe2-town'
 const TICK_MS = 300
-/** How long a finished subagent walks home before it leaves the map. */
-const HOMEWARD_MS = 3500
-const BURN_MS = 6000
 
 const EMPTY_TOWN: Town = {
   mood: 'idle',
@@ -18,23 +16,26 @@ const EMPTY_TOWN: Town = {
   contextPercent: null,
   trained: 0,
   burningUntil: 0,
+  tcBuiltAt: null,
 }
 
 const town = atom({ plugin: 'aoe2-town', key: 'town' } as const, EMPTY_TOWN)
 const frame = atom({ plugin: 'aoe2-town', key: 'frame' } as const, 0)
+const isHidden = atom({ plugin: 'aoe2-town', key: 'isHidden' } as const, false)
+
+/** The town as stored, with any field an older version did not keep. */
+function filled(t: Town): Town {
+  return { ...EMPTY_TOWN, ...t }
+}
+
+/** Whether a terminal drew the band last: only it needs the clock's frames. */
+let isTerminalDrawn = false
 
 const MOOD_TEXT: Record<Town['mood'], string> = {
   idle: 'Idle',
   working: 'Working…',
   permission: 'Wololo! Awaiting orders',
   error: 'Under attack!',
-}
-
-const UNIT_NAMES: Record<UnitKind, string> = {
-  villager: 'Villager',
-  scout: 'Scout',
-  monk: 'Monk',
-  militia: 'Militia',
 }
 
 function unitKind(agentType: string): UnitKind {
@@ -101,7 +102,7 @@ async function play($: EngineInterface, category: string, fallback?: string, coo
 async function change($: EngineInterface, fn: (t: Town) => Town) {
   const before = await read($, town)
   const after = await update($, town, t => {
-    const next = fn(t)
+    const next = fn(filled(t))
     return { ...next, age: Math.max(next.age, ageFor(next.tasks)) }
   })
   $.ui.status(statusLine(after))
@@ -149,33 +150,33 @@ export const register: Register = (on, options) => {
   // ── The session and its clock ────────────────────────────────────────────
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'aoe2', description: 'Show the Age of Empires II town pane' })
-    if (e.isInteractive) void $.ui.open({ id: PANE, title: 'AoE II', columns: WIDTH + 2 })
+    await $.command.register({ name: 'aoe2', description: 'Show or hide the Age of Empires II town above the prompt' })
 
     $.clock.every(TICK_MS, async () => {
       const now = await $.clock.now()
       const t = await read($, town)
-      if (!isAnimated(t, now)) return
-      await update($, frame, n => (n + 1) % 1_000_000)
+      if (isTerminalDrawn) await update($, frame, n => (n + 1) % 1_000_000)
       if (t.units.some(unit => unit.doneAt !== null && now - unit.doneAt > HOMEWARD_MS)) {
         await change($, s => ({ ...s, units: s.units.filter(unit => unit.doneAt === null || now - unit.doneAt <= HOMEWARD_MS) }))
       }
     })
 
-    $.ui.status(statusLine(await read($, town)))
+    $.ui.status(statusLine(filled(await read($, town))))
     if (soundMode === 'all') await play($, 'session-start')
     return next(e)
   })
 
   on('command.run', { command: 'aoe2' }, async $ => {
-    await $.ui.open({ id: PANE, title: 'AoE II', columns: WIDTH + 2 })
-    return { text: 'The town is in view. Wololo.' }
+    const hidden = await update($, isHidden, was => !was)
+    return { text: hidden ? 'The town is hidden. /aoe2 brings it back.' : 'The town is back above the prompt. Wololo.' }
   })
 
   // ── The main agent: the Town Center ──────────────────────────────────────
 
   on('turn.start', async ($, e, next) => {
-    await setMood($, 'working')
+    const now = await $.clock.now()
+    // the first turn raises the Town Center; every turn sets it working
+    await change($, t => ({ ...t, mood: 'working', tcBuiltAt: t.tcBuiltAt ?? now }))
     return next(e)
   })
 
@@ -199,7 +200,7 @@ export const register: Register = (on, options) => {
     if (e.is_interrupt !== true) {
       const now = await $.clock.now()
       await change($, t => ({ ...t, burningUntil: now + BURN_MS }))
-      if (soundMode === 'all' && e.tool_name === 'Bash') await play($, 'error', undefined, 0, JSON.stringify(e))
+      if (soundMode === 'all' && (e.tool_name === 'Bash' || e.tool_name === 'PowerShell')) await play($, 'error', undefined, 0, JSON.stringify(e))
     }
     return next(e)
   })
@@ -275,61 +276,37 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // ── The pane ─────────────────────────────────────────────────────────────
+  // ── The band above the prompt ────────────────────────────────────────────
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const t = await read($, town)
-    const n = await read($, frame)
-    const px = drawTown(t, n, await $.clock.now())
-    const width = Math.max(20, Math.min(e.props.bodyColumns, WIDTH))
-    const built = t.tasks.filter(task => task.status === 'completed').length
-    const pop = t.contextPercent === null ? '—' : String(Math.round(t.contextPercent * 2))
-    const isPopFull = (t.contextPercent ?? 0) >= 90
-    const working = t.units.filter(unit => unit.doneAt === null)
-    const shown = visibleTasks(t.tasks)
-    const moodColor = t.mood === 'permission' ? 'yellow' : t.mood === 'working' ? 'green' : undefined
-
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey || (await read($, isHidden))) return next(e)
+    const t = filled(await read($, town))
     const ui = $.ui.resolve(e)
-    const { Box, Text } = ui
-    const picture =
-      e.surface === 'terminal' && 'Raster' in ui ? (
-        <ui.Raster key="town" columns={WIDTH} rows={ROWS} cells={toRasterCells(px)} />
-      ) : 'Svg' in ui ? (
-        <ui.Svg source={toSvg(px, 6)} alt={`${ageName(t.age)} town`} width={WIDTH * 6} height={HEIGHT * 6} />
-      ) : null
 
-    return (
-      <Box flexDirection="column" width={width}>
-        <Box>
-          <Text bold color="#e8c040">
-            {ageName(t.age)}
-          </Text>
-          <Text dimColor={t.mood === 'idle'} color={moodColor}>
-            {' '}
-            {MOOD_TEXT[t.mood]}
+    if (e.surface === 'terminal' && 'Raster' in ui) {
+      isTerminalDrawn = true
+      await read($, frame)
+      const width = Math.max(40, Math.min(e.props.bodyColumns, 200))
+      const now = await $.clock.now()
+      const { Box, Text, Raster } = ui
+      return (
+        <Box flexDirection="column">
+          <Raster key="town" columns={width} rows={STRIP_ROWS} cells={toRasterCells(drawStrip(t, now, width), width)} />
+          <Text wrap="truncate" dimColor>
+            {statusLine(t)}
           </Text>
         </Box>
-        {picture}
-        <Text wrap="truncate">
-          <Text color={isPopFull ? 'red' : undefined}>Pop {pop}/200</Text>
-          <Text dimColor> · </Text>
-          Units {working.length}
-          <Text dimColor> · </Text>
-          Built {built}/{t.tasks.length}
-        </Text>
-        {isPopFull && <Text color="red">You need to build more houses! (compact soon)</Text>}
-        {t.tasks.length > shown.length && <Text dimColor>+{t.tasks.length - shown.length} older tasks</Text>}
-        {shown.map(task => (
-          <Text key={`task-${task.id}`} wrap="truncate" dimColor={task.status === 'completed'}>
-            {task.status === 'completed' ? '■' : task.status === 'in_progress' ? '▲' : '□'} {task.subject}
-          </Text>
-        ))}
-        {working.map(unit => (
-          <Text key={`unit-${unit.id}`} wrap="truncate" color="#6f9cff">
-            ⚒ {UNIT_NAMES[unit.kind]}: {unit.label}
-          </Text>
-        ))}
-      </Box>
-    )
+      )
+    }
+    if ('Svg' in ui) {
+      isTerminalDrawn = false
+      const { Box, Svg } = ui
+      return (
+        <Box>
+          <Svg source={townSvg(t, await $.clock.now())} alt={statusLine(t)} isInteractive />
+        </Box>
+      )
+    }
+    return next(e)
   })
 }

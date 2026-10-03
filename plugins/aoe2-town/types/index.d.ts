@@ -30,10 +30,12 @@ export type Town = {
   trained: number
   /** Until when the Town Center burns after a failure (ms since epoch). */
   burningUntil: number
+  /** When the Town Center started going up: the first turn; null before. */
+  tcBuiltAt: number | null
 }
 
 declare module 'claude-code' {
   interface PluginState {
-    'aoe2-town': { town: Town; frame: number }
+    'aoe2-town': { town: Town; frame: number; isHidden: boolean }
   }
 }
