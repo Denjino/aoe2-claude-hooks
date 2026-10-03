@@ -1,6 +1,6 @@
 {
   "name": "aoe2-town",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Watch Claude work as a tiny Age of Empires II town above the prompt: subagents are units, tasks are houses, context is population.",
   "author": {
     "name": "Denjino"

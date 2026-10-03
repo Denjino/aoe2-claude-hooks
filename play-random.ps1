@@ -131,14 +131,36 @@ Write-DebugLog "Launching playback for: $ChosenPath (volume=$Volume)"
 
 # Write a temporary playback script to avoid argument-quoting issues with paths
 # that contain spaces (e.g. C:\Users\John Doe\...).
-# Strategy: try WMPlayer.OCX first (simpler, synchronous), fall back to WPF
-# MediaPlayer with -STA (always available, needs single-threaded apartment).
+# Strategy: the WinRT MediaPlayer first (Media Foundation, present on every
+# Windows 10/11), then WMPlayer.OCX, then WPF MediaPlayer with -STA; the last
+# two need the optional Windows Media Player feature.
 $tempScript = Join-Path $env:TEMP "aoe2-play-$(Get-Random).ps1"
 
 try {
     @"
 try {
-    # Attempt 1: Windows Media Player COM object (synchronous, simple)
+    # Attempt 1: the WinRT MediaPlayer, on Media Foundation. It needs no
+    # Windows Media Player, which some Windows installs leave out.
+    [void][Windows.Media.Playback.MediaPlayer, Windows.Media, ContentType = WindowsRuntime]
+    [void][Windows.Media.Core.MediaSource, Windows.Media, ContentType = WindowsRuntime]
+    `$player = New-Object Windows.Media.Playback.MediaPlayer
+    `$player.Volume = $Volume
+    `$player.Source = [Windows.Media.Core.MediaSource]::CreateFromUri([Uri]'$($ChosenPath -replace "'", "''")')
+    `$player.Play()
+    `$deadline = (Get-Date).AddSeconds(15)
+    # Wait for it to start (3 Playing), then for it to finish
+    `$startBy = (Get-Date).AddSeconds(3)
+    while ([int]`$player.PlaybackSession.PlaybackState -ne 3 -and (Get-Date) -lt `$startBy) {
+        Start-Sleep -Milliseconds 50
+    }
+    if ([int]`$player.PlaybackSession.PlaybackState -ne 3) { throw 'WinRT playback did not start' }
+    while (@(1, 2, 3) -contains [int]`$player.PlaybackSession.PlaybackState -and (Get-Date) -lt `$deadline) {
+        Start-Sleep -Milliseconds 100
+    }
+    `$player.Dispose()
+} catch {
+try {
+    # Attempt 2: Windows Media Player COM object (synchronous, simple)
     `$wmp = New-Object -ComObject WMPlayer.OCX -ErrorAction Stop
     `$wmp.settings.mute = `$false
     `$wmp.settings.volume = [Math]::Max(1, [int]($Volume * 100))
@@ -155,7 +177,7 @@ try {
     }
     `$wmp.close()
 } catch {
-    # Attempt 2: WPF MediaPlayer (always available on Windows 10/11)
+    # Attempt 3: WPF MediaPlayer (always available on Windows 10/11)
     try {
         Add-Type -AssemblyName PresentationCore
         `$player = New-Object System.Windows.Media.MediaPlayer
@@ -166,6 +188,7 @@ try {
         Start-Sleep -Seconds 5
         `$player.Close()
     } catch {}
+}
 } finally {
     Remove-Item -Path '$($tempScript -replace "'", "''")' -Force -ErrorAction SilentlyContinue
 }

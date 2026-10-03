@@ -48,7 +48,7 @@ The installer copies scripts to `~/.claude/sounds/aoe2/` (macOS/Linux) or `%USER
 
 ![The town through a session](docs/aoe2-town.png)
 
-A Claude Code mod that draws your session as a small Age of Empires II town in a short band across the top of the prompt. The desktop app shows animated vector art; the terminal shows a pixel-art strip.
+A Claude Code mod that draws your session as a small Age of Empires II town in a short band across the top of the prompt. The desktop app shows an animated pixel-art town that fills the band; the terminal shows a pixel-art strip.
 
 | In Claude Code | In the town |
 | --- | --- |

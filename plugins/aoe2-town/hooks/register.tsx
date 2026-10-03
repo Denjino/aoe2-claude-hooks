@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Town, TownTask, TaskStatus, UnitKind } from '../types'
 import { STRIP_ROWS, drawStrip, toRasterCells } from './pixels'
 import { townSvg } from './svg'
-import { BURN_MS, HOMEWARD_MS, ageName } from './world'
+import { BURN_MS, HOMEWARD_MS, WORLD_H, WORLD_W, ageName } from './world'
 
 const TICK_MS = 300
 
@@ -301,9 +301,12 @@ export const register: Register = (on, options) => {
     if ('Svg' in ui) {
       isTerminalDrawn = false
       const { Box, Svg } = ui
+      // The desktop frame ignores the markup's own size, so give it one: the band's
+      // columns at ~8 CSS px each, keeping the world's aspect ratio.
+      const width = Math.max(320, e.props.bodyColumns * 8)
       return (
-        <Box>
-          <Svg source={townSvg(t, await $.clock.now())} alt={statusLine(t)} isInteractive />
+        <Box flexDirection="column">
+          <Svg source={townSvg(t, await $.clock.now())} alt={statusLine(t)} width={width} height={Math.round((width * WORLD_H) / WORLD_W)} isInteractive />
         </Box>
       )
     }

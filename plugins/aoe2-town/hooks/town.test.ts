@@ -30,10 +30,14 @@ test('subagents become units and tasks become houses, on every surface', { optio
   await terminal.unmount()
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop', props: BAND_PROPS })
-  const svg = String((await desktop.find({ type: 'Svg' }))?.props.source)
-  expect(svg).toContain('Feudal Age')
+  const town = await desktop.find({ type: 'Svg' })
+  const svg = String(town?.props.source)
+  // the Age is the status line's to show; the drawing carries it as its alt text
+  expect(String(town?.props.alt)).toContain('Feudal Age')
   expect(svg).toContain('<title>Write the parser</title>')
   expect(svg).toContain('<title>Explore</title>')
+  // the desktop's Svg element takes at most 131072 characters
+  expect(svg.length).toBeLessThan(131072)
   await desktop.unmount()
 
   await $.classic.SubagentStop({ agent_id: 'a1', agent_type: 'Explore', stop_hook_active: false, agent_transcript_path: '' })
